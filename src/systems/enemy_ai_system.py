@@ -57,11 +57,15 @@ class EnemyAISystem(System):
         if distance_to_player <= enemy_type.detection_range:
             ai.set_target(self.player_entity)
             
-            # Decide what to do based on distance and enemy type
-            if distance_to_player <= enemy_type.attack_range and ai.can_attack():
+            # Don't interrupt ongoing timed actions like charging
+            if ai.state == AIState.CHARGING:
+                # Let charging complete, don't change state
+                pass
+            elif distance_to_player <= enemy_type.attack_range and ai.can_attack():
                 # Check if this enemy uses charge shots
                 if enemy_type.uses_charge_shot():
                     ai.set_state(AIState.CHARGING, enemy_type.get_charge_time())
+                    print(f"Heavy enemy starting charge shot (1.5s)...")
                 else:
                     ai.start_attack(enemy_type.attack_cooldown)
             elif distance_to_player > enemy_type.attack_range:
@@ -73,7 +77,8 @@ class EnemyAISystem(System):
             if ai.target:
                 ai.clear_target()
             
-            if ai.state not in [AIState.PATROL, AIState.IDLE]:
+            # Don't interrupt charging even if player goes out of detection range
+            if ai.state not in [AIState.PATROL, AIState.IDLE, AIState.CHARGING]:
                 ai.set_state(AIState.PATROL)
                 
     def _execute_ai_state(self, entity, ai, enemy_type, dt):
@@ -172,13 +177,19 @@ class EnemyAISystem(System):
             
         if ai.is_state_finished():
             # Charge complete - fire the charged shot
+            print(f"Heavy enemy charge complete! Firing charged shot...")
             self._perform_charged_attack(entity, ai, enemy_type)
-            # Set cooldown after charged attack
-            ai.start_attack(enemy_type.attack_cooldown)
             
             # Reset enemy color
             if renderer:
                 renderer.color = enemy_type.get_color()
+            
+            # Set attack cooldown and return to chase/patrol
+            ai.attack_cooldown = enemy_type.attack_cooldown
+            if ai.target and self._get_distance_to_player(entity) <= enemy_type.detection_range:
+                ai.set_state(AIState.CHASE)
+            else:
+                ai.set_state(AIState.PATROL)
             
     def _execute_stunned(self, entity, ai, enemy_type, dt):
         """Execute stunned behavior"""
@@ -241,17 +252,20 @@ class EnemyAISystem(System):
     def _perform_charged_attack(self, entity, ai, enemy_type):
         """Perform charged attack (slower, more powerful projectile)"""
         if not ai.target:
+            print("Heavy enemy charge attack failed: No target!")
             return
             
         # Calculate direction to target
         direction = self._get_direction_to_player(entity)
         if direction.length() == 0:
+            print("Heavy enemy charge attack failed: No direction to player!")
             return
             
         direction.normalize_ip()
         
         # Create charged projectile with higher damage
         charged_damage = enemy_type.damage * 1.5  # 50% more damage
+        print(f"Heavy enemy firing charged shot! Damage: {charged_damage}")
         self._create_enemy_projectile(entity, direction, charged_damage, is_charged=True)
         
     def _create_enemy_projectile(self, owner, direction, damage, is_charged=False):

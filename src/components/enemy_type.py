@@ -58,8 +58,8 @@ class EnemyType(Component):
             self.max_health = 80
             self.move_speed = 80.0
             self.damage = 35
-            self.detection_range = 150.0
-            self.attack_range = 60.0
+            self.detection_range = 200.0
+            self.attack_range = 120.0  # Longer range for charge shots
             self.attack_cooldown = 0.3  # Same as player
             self.ink_value = 20
             
