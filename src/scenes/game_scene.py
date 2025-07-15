@@ -55,6 +55,9 @@ class GameScene:
         self.enemy_ai_system = EnemyAISystem(self)
         self.ui_system = UISystem()
         
+        # Connect physics system to collision system for ground detection
+        self.physics_system.set_collision_system(self.collision_system)
+        
         # Add systems to list - order matters for collision detection
         self.systems = [
             self.movement_system,   # Handle input first
@@ -147,14 +150,15 @@ class GameScene:
     
     def _create_enemies(self):
         """Create various enemy types for testing"""
+        # Create enemies higher up so we can see them fall
         # Create a Rusher enemy
-        self._create_enemy(EnemyTypeEnum.RUSHER, 800, 600)
+        self._create_enemy(EnemyTypeEnum.RUSHER, 800, 400)
         
         # Create a Shooter enemy
-        self._create_enemy(EnemyTypeEnum.SHOOTER, 1000, 600)
+        self._create_enemy(EnemyTypeEnum.SHOOTER, 1000, 300)
         
         # Create a Heavy enemy  
-        self._create_enemy(EnemyTypeEnum.HEAVY, 500, 600)
+        self._create_enemy(EnemyTypeEnum.HEAVY, 500, 200)
         
     def _create_enemy(self, enemy_type_enum, x, y):
         """Create an enemy of the specified type"""

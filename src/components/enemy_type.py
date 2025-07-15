@@ -40,7 +40,7 @@ class EnemyType(Component):
             self.damage = 15
             self.detection_range = 250.0
             self.attack_range = 40.0
-            self.attack_cooldown = 0.8
+            self.attack_cooldown = 0.3  # Same as player
             self.ink_value = 8
             
         elif self.enemy_type == EnemyTypeEnum.SHOOTER:
@@ -50,7 +50,7 @@ class EnemyType(Component):
             self.damage = 25
             self.detection_range = 300.0
             self.attack_range = 180.0  # Longer range for shooting
-            self.attack_cooldown = 1.5
+            self.attack_cooldown = 0.3  # Same as player
             self.ink_value = 12
             
         elif self.enemy_type == EnemyTypeEnum.HEAVY:
@@ -60,7 +60,7 @@ class EnemyType(Component):
             self.damage = 35
             self.detection_range = 150.0
             self.attack_range = 60.0
-            self.attack_cooldown = 2.0
+            self.attack_cooldown = 0.3  # Same as player
             self.ink_value = 20
             
     def get_color(self):
@@ -89,7 +89,17 @@ class EnemyType(Component):
             
     def should_shoot(self):
         """Check if this enemy type can shoot projectiles"""
-        return self.enemy_type == EnemyTypeEnum.SHOOTER
+        return self.enemy_type in [EnemyTypeEnum.SHOOTER, EnemyTypeEnum.HEAVY]
+    
+    def uses_charge_shot(self):
+        """Check if this enemy type uses charge shots"""
+        return self.enemy_type == EnemyTypeEnum.HEAVY
+    
+    def get_charge_time(self):
+        """Get charge time for charge shots"""
+        if self.enemy_type == EnemyTypeEnum.HEAVY:
+            return 1.5  # 1.5 seconds charge time for heavy enemies
+        return 0.0
         
     def get_patrol_range(self):
         """Get patrol range for this enemy type"""

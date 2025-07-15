@@ -8,7 +8,7 @@ from enum import Enum
 
 class CollisionType(Enum):
     """Types of collision responses"""
-    SOLID = "solid"      # Blocks movement
+    SOLID = "solid"      # Blocks movement (terrain)
     TRIGGER = "trigger"  # Detects but doesn't block
     DAMAGE = "damage"    # Deals damage on contact
 

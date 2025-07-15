@@ -30,9 +30,14 @@ class ShootingSystem(System):
         self.input_manager = input_manager
         self.scene = scene
         self.projectiles = []
+        self.shoot_cooldown = 0.0  # Cooldown timer for player shooting
         
     def update(self, dt: float):
         """Update shooting system"""
+        # Update cooldown timer
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= dt
+        
         # Handle player shooting
         for entity in self.entities:
             if hasattr(entity, 'can_shoot') and entity.can_shoot:
@@ -48,6 +53,10 @@ class ShootingSystem(System):
         
         # Check if shoot button is pressed
         if self.input_manager.is_shoot_pressed():
+            # Check cooldown first
+            if self.shoot_cooldown > 0:
+                return
+            
             # Check stamina
             if not stamina or stamina.can_perform_action('shoot'):
                 # Get aim direction using player position
@@ -59,6 +68,9 @@ class ShootingSystem(System):
                 # Consume stamina
                 if stamina:
                     stamina.consume_stamina('shoot')
+                
+                # Set cooldown (0.3 seconds between shots)
+                self.shoot_cooldown = 0.3
     
     def _create_projectile(self, owner, direction):
         """Create a projectile"""

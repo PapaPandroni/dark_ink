@@ -62,10 +62,25 @@ class CollisionSystem(System):
         collision1 = entity1.get_component(Collision)
         collision2 = entity2.get_component(Collision)
         
-        # Handle solid collisions
+        # Handle solid collisions with behavior based on entity components
         if (collision1.collision_type == CollisionType.SOLID and 
             collision2.collision_type == CollisionType.SOLID):
-            self._resolve_solid_collision(entity1, entity2)
+            
+            # Check entity types using components
+            from src.components.enemy_type import EnemyType
+            from src.components.stamina import Stamina
+            
+            is_player1 = entity1.get_component(Stamina) is not None
+            is_player2 = entity2.get_component(Stamina) is not None
+            is_enemy1 = entity1.get_component(EnemyType) is not None
+            is_enemy2 = entity2.get_component(EnemyType) is not None
+            
+            # Player-enemy collision (pushback, no landing)
+            if (is_player1 and is_enemy2) or (is_player2 and is_enemy1):
+                self._handle_player_enemy_collision(entity1, entity2)
+            # All other solid collisions (player-terrain, enemy-terrain, terrain-terrain)
+            else:
+                self._resolve_solid_collision(entity1, entity2)
         
         # Handle trigger collisions
         if (collision1.collision_type == CollisionType.TRIGGER or 
@@ -135,11 +150,28 @@ class CollisionSystem(System):
             ground_top = static_transform.position.y - static_collision.height // 2
             player_half_height = moving_collision.height // 2
             
+            # Debug info
+            entity_info = ""
+            if hasattr(moving_entity, 'get_component'):
+                from src.components.stamina import Stamina
+                from src.components.enemy_type import EnemyType
+                if moving_entity.get_component(Stamina):
+                    entity_info = "PLAYER"
+                elif moving_entity.get_component(EnemyType):
+                    entity_type = moving_entity.get_component(EnemyType)
+                    entity_info = f"ENEMY_{entity_type.enemy_type.value.upper()}"
+                else:
+                    entity_info = "UNKNOWN"
+            
             # Position player exactly on top of ground
+            old_on_ground = moving_physics.on_ground
             moving_transform.position.y = ground_top - player_half_height
             moving_physics.velocity.y = 0
             moving_physics.on_ground = True
             moving_physics.can_jump = True
+            
+            if not old_on_ground:
+                print(f"[COLLISION] {entity_info} LANDED on ground - setting on_ground=True (pos_y={moving_transform.position.y:.1f})")
         elif abs(direction.x) > 0.5:  # Side collision
             # Side collision - bounce off
             separation = direction * 5  # Stronger separation
@@ -151,6 +183,46 @@ class CollisionSystem(System):
         elif direction.y > 0.5:  # Hitting from below
             # If hitting from below, stop upward movement
             moving_physics.velocity.y = 0
+    
+    def _handle_player_enemy_collision(self, entity1, entity2):
+        """Handle collision between player and enemy (pushback, no landing)"""
+        # Determine which is player and which is enemy using components
+        from src.components.stamina import Stamina
+        from src.components.enemy_type import EnemyType
+        
+        player_entity = None
+        enemy_entity = None
+        
+        if entity1.get_component(Stamina) is not None:
+            player_entity = entity1
+            enemy_entity = entity2
+        elif entity2.get_component(Stamina) is not None:
+            player_entity = entity2  
+            enemy_entity = entity1
+        else:
+            return  # No player in this collision
+            
+        # Apply pushback to player
+        player_transform = player_entity.get_component(Transform)
+        enemy_transform = enemy_entity.get_component(Transform)
+        player_physics = player_entity.get_component(Physics)
+        
+        if not all([player_transform, enemy_transform, player_physics]):
+            return
+            
+        # Calculate pushback direction (from enemy to player)
+        pushback_direction = player_transform.position - enemy_transform.position
+        if pushback_direction.length() == 0:
+            pushback_direction = pygame.Vector2(1, 0)  # Default right
+        else:
+            pushback_direction.normalize_ip()
+        
+        # Apply strong pushback force
+        pushback_force = 300.0
+        player_physics.add_impulse(pushback_direction * pushback_force)
+        
+        # Log pushback event
+        print(f"[COLLISION] PLAYER pushed back by enemy (force={pushback_force}, direction=({pushback_direction.x:.1f},{pushback_direction.y:.1f}))")
     
     def _handle_trigger_collision(self, entity1, entity2):
         """Handle trigger collision (no physical response)"""

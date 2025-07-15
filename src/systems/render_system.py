@@ -59,6 +59,21 @@ class RenderSystem(System):
             
             # Apply visual effects for special states
             original_alpha = renderer.alpha
+            original_color = renderer.color
+            
+            # Debug: Show physics state with color changes
+            from src.components.physics import Physics
+            physics = entity.get_component(Physics)
+            if physics:
+                if physics.on_ground:
+                    # Add green tint for entities on ground
+                    r, g, b = original_color
+                    renderer.color = (min(255, r), min(255, g + 50), min(255, b))
+                else:
+                    # Add red tint for entities in air
+                    r, g, b = original_color
+                    renderer.color = (min(255, r + 50), min(255, g), min(255, b))
+            
             if health and health.invincible and hasattr(entity, 'dashing') and entity.dashing:
                 # Flash effect during dash invincibility
                 flash_speed = 8.0  # Flashes per second
@@ -72,8 +87,9 @@ class RenderSystem(System):
             elif renderer.shape == RenderShape.TRIANGLE:
                 self._render_triangle(screen_pos, renderer)
             
-            # Restore original alpha
+            # Restore original values
             renderer.alpha = original_alpha
+            renderer.color = original_color
     
     def _world_to_screen(self, world_pos):
         """Convert world position to screen position"""

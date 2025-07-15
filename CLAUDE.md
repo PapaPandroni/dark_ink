@@ -25,11 +25,14 @@ The game uses an Entity Component System (ECS) architecture for modularity and e
 - ✅ Basic physics with gravity and collision
 - ✅ 8-directional dash with invincibility frames
 
-### Phase 2: Combat & Death System
-- Enemy types: Rusher (red), Shooter (blue), Heavy (green)
-- Projectile system with damage and knockback
-- Ink currency drops from enemies
-- Death penalty system with ink recovery mechanic
+### Phase 2: Combat & Death System ✅ **95% COMPLETE**
+- ✅ Enemy types: Rusher (red), Shooter (blue), Heavy (green)
+- ✅ Advanced projectile system with damage and knockback
+- ✅ Sophisticated AI with charge mechanics for Heavy enemies
+- ✅ Player-enemy collision with pushback system
+- ✅ Balanced combat timing (0.3s cooldowns for all entities)
+- ⏳ Ink currency drops from enemies
+- ⏳ Death penalty system with ink recovery mechanic
 
 ### Phase 3: Level & Save System
 - Interconnected scrolling levels
@@ -144,30 +147,38 @@ python -m pdb main.py
 - ✅ Ranged enemy projectiles (blue shooter enemies)
 - ✅ Proper collision separation between player and enemy systems
 
-**Physics & Controls Refined**:
+**Advanced Physics System**:
 - Ground-based horizontal control with full responsiveness
 - Jump momentum preservation with limited air adjustment (50% control)
 - Precise mouse aiming from player position to cursor
-- Collision system prevents ground penetration and wall clipping
+- **Edge Detection**: Entities properly fall when walking off platforms
+- **Ground State Management**: Robust on_ground tracking with automatic reset
+- **Collision Separation**: Player-enemy pushback without physics corruption
 - Projectiles maintain constant velocity without physics interference
 
-**Debug Features**:
+**Debug & Development Features**:
 - Infinite stamina mode for testing (`DEBUG_INFINITE_STAMINA = True`)
 - Debug UI showing position, velocity, and ground state
+- **Visual Physics Debug**: Entities show green (grounded) or red (airborne) tints
+- **Debug Logging**: Physics state changes and collision events
 - Proper projectile lifetime management (2 second auto-despawn)
 
-**Enemy Details**:
-- **Red Rusher**: 30 HP, 200 speed, 15 damage, 250 detection range, aggressive melee
-- **Blue Shooter**: 40 HP, 120 speed, 25 damage, 300 detection range, ranged attacks
-- **Green Heavy**: 80 HP, 80 speed, 35 damage, 150 detection range, slow tank
+**Enemy Details** (All with 0.3s attack cooldown):
+- **Red Rusher**: 30 HP, 200 speed, 15 damage, 250 detection range, aggressive melee with knockback
+- **Blue Shooter**: 40 HP, 120 speed, 25 damage, 300 detection range, rapid ranged attacks
+- **Green Heavy**: 80 HP, 80 speed, 35 damage, 150 detection range, charge shots (1.5s charge, 52.5 damage, slow projectiles)
 
-**Phase 2 Progress (Combat & Death System)**:
-- ✅ Complete damage system integration
-- ✅ Create enemy AI components  
-- ✅ Build enemy AI system
-- ✅ Create enemy entities (Rusher, Shooter, Heavy)
-- ✅ Enemy AI behaviors and combat mechanics
-- ✅ Enemy death and cleanup system
+**Recent Combat & Physics Improvements**:
+- ✅ **Physics System Overhaul**: Fixed "sticky ground" bug where entities couldn't fall off edges
+- ✅ **Ground Detection**: Added sophisticated edge detection preventing floating entities
+- ✅ **Player-Enemy Collision**: Pushback system prevents landing on enemies
+- ✅ **Combat Balance**: Standardized 0.3s cooldowns for responsive gameplay
+- ✅ **Charge Shot System**: Heavy enemies flash yellow during 1.5s charge, fire large slow projectiles
+- ✅ **Visual Debug Indicators**: Green tint for grounded entities, red tint for airborne
+- ✅ **Advanced AI States**: Full state machine (idle, patrol, chase, attack, charging, stunned)
+- ✅ **Knockback System**: All damage sources apply proper physics impulses
+
+**Remaining Phase 2 Tasks**:
 - ⏳ Implement ink currency drop system
 - ⏳ Add death and respawn mechanics
 

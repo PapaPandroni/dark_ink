@@ -59,9 +59,15 @@ class EnemyAISystem(System):
             
             # Decide what to do based on distance and enemy type
             if distance_to_player <= enemy_type.attack_range and ai.can_attack():
-                ai.start_attack(enemy_type.attack_cooldown)
+                # Check if this enemy uses charge shots
+                if enemy_type.uses_charge_shot():
+                    ai.set_state(AIState.CHARGING, enemy_type.get_charge_time())
+                else:
+                    ai.start_attack(enemy_type.attack_cooldown)
             elif distance_to_player > enemy_type.attack_range:
                 ai.set_state(AIState.CHASE)
+                # Reset color when changing states
+                self._reset_enemy_color(entity, enemy_type)
         else:
             # Player out of range - patrol or idle
             if ai.target:
@@ -80,6 +86,8 @@ class EnemyAISystem(System):
             self._execute_chase(entity, ai, enemy_type, dt)
         elif ai.state == AIState.ATTACK:
             self._execute_attack(entity, ai, enemy_type, dt)
+        elif ai.state == AIState.CHARGING:
+            self._execute_charging(entity, ai, enemy_type, dt)
         elif ai.state == AIState.STUNNED:
             self._execute_stunned(entity, ai, enemy_type, dt)
             
@@ -146,6 +154,32 @@ class EnemyAISystem(System):
         else:
             self._perform_melee_attack(entity, ai, enemy_type)
             
+    def _execute_charging(self, entity, ai, enemy_type, dt):
+        """Execute charging behavior for charge shots"""
+        # Stop movement during charge
+        physics = entity.get_component(Physics)
+        if physics:
+            physics.velocity.x = 0
+            
+        # Add visual feedback during charging
+        from src.components.renderer import Renderer
+        renderer = entity.get_component(Renderer)
+        if renderer:
+            # Make enemy flash bright yellow during charging
+            charge_progress = 1.0 - (ai.state_timer / enemy_type.get_charge_time())
+            flash_intensity = int(100 + (155 * charge_progress))  # 100 to 255
+            renderer.color = (255, 255, flash_intensity)  # Bright yellow flash
+            
+        if ai.is_state_finished():
+            # Charge complete - fire the charged shot
+            self._perform_charged_attack(entity, ai, enemy_type)
+            # Set cooldown after charged attack
+            ai.start_attack(enemy_type.attack_cooldown)
+            
+            # Reset enemy color
+            if renderer:
+                renderer.color = enemy_type.get_color()
+            
     def _execute_stunned(self, entity, ai, enemy_type, dt):
         """Execute stunned behavior"""
         # Stop movement during stun
@@ -158,18 +192,36 @@ class EnemyAISystem(System):
             
     def _perform_melee_attack(self, entity, ai, enemy_type):
         """Perform melee attack"""
-        # For melee attacks, we deal damage through collision
-        # The collision system will handle damage when entities overlap
-        
-        # Add a temporary damage collision for melee attack
-        collision = entity.get_component(Collision)
-        if collision:
-            # Temporarily expand collision for attack
-            original_type = collision.collision_type
-            collision.collision_type = CollisionType.DAMAGE
+        if not ai.target:
+            return
             
-            # Reset collision type after attack (this is a simple approach)
-            # In a more complex system, we'd have separate attack collision components
+        # Check if we're close enough to deal damage
+        distance_to_target = self._get_distance_to_player(entity)
+        if distance_to_target <= enemy_type.attack_range:
+            # Deal damage directly to the target
+            from src.components.health import Health
+            target_health = ai.target.get_component(Health)
+            if target_health:
+                damage_dealt = target_health.take_damage(enemy_type.damage)
+                
+                if damage_dealt:
+                    # Add knockback effect to target
+                    target_physics = ai.target.get_component(Physics)
+                    if target_physics:
+                        # Calculate knockback direction from enemy to target
+                        entity_transform = entity.get_component(Transform)
+                        target_transform = ai.target.get_component(Transform)
+                        
+                        if entity_transform and target_transform:
+                            knockback_direction = target_transform.position - entity_transform.position
+                            if knockback_direction.length() > 0:
+                                knockback_direction.normalize_ip()
+                                # Apply knockback force
+                                from src.core.settings import KNOCKBACK_FORCE
+                                target_physics.add_impulse(knockback_direction * KNOCKBACK_FORCE)
+                
+                # Stun the attacker briefly after successful melee attack
+                ai.set_state(AIState.STUNNED, 0.3)
             
     def _perform_ranged_attack(self, entity, ai, enemy_type):
         """Perform ranged attack by shooting projectile"""
@@ -184,9 +236,25 @@ class EnemyAISystem(System):
         direction.normalize_ip()
         
         # Create enemy projectile (similar to player shooting)
-        self._create_enemy_projectile(entity, direction, enemy_type.damage)
+        self._create_enemy_projectile(entity, direction, enemy_type.damage, is_charged=False)
         
-    def _create_enemy_projectile(self, owner, direction, damage):
+    def _perform_charged_attack(self, entity, ai, enemy_type):
+        """Perform charged attack (slower, more powerful projectile)"""
+        if not ai.target:
+            return
+            
+        # Calculate direction to target
+        direction = self._get_direction_to_player(entity)
+        if direction.length() == 0:
+            return
+            
+        direction.normalize_ip()
+        
+        # Create charged projectile with higher damage
+        charged_damage = enemy_type.damage * 1.5  # 50% more damage
+        self._create_enemy_projectile(entity, direction, charged_damage, is_charged=True)
+        
+    def _create_enemy_projectile(self, owner, direction, damage, is_charged=False):
         """Create a projectile fired by an enemy"""
         owner_transform = owner.get_component(Transform)
         if not owner_transform:
@@ -202,23 +270,34 @@ class EnemyAISystem(System):
         # Add physics with velocity in aim direction
         from src.components.physics import Physics
         physics = Physics(mass=0.1, friction=1.0, gravity_scale=0)
-        physics.velocity = direction * PROJECTILE_SPEED
+        
+        # Charged shots are slower but more powerful
+        projectile_speed = PROJECTILE_SPEED * 0.6 if is_charged else PROJECTILE_SPEED
+        physics.velocity = direction * projectile_speed
         physics.affected_by_gravity = False
-        physics.max_speed = PROJECTILE_SPEED + 100
+        physics.max_speed = projectile_speed + 100
         projectile.add_component(physics)
         
-        # Add collision
+        # Add collision (much larger for charged shots)
+        collision_size = 16 if is_charged else 6
         projectile.add_component(Collision(
-            width=6, height=6,
+            width=collision_size, height=collision_size,
             collision_type=CollisionType.DAMAGE
         ))
         
-        # Add renderer (different color for enemy projectiles)
+        # Add renderer (highly distinctive colors and sizes for charged shots)
         from src.components.renderer import Renderer, RenderShape
         from src.core.settings import COLORS
+        if is_charged:
+            projectile_color = (255, 255, 100)  # Bright yellow for charged shots
+            projectile_size = (16, 16)  # Much larger
+        else:
+            projectile_color = (255, 100, 100)  # Red-ish for normal enemy projectiles
+            projectile_size = (6, 6)
+            
         projectile.add_component(Renderer(
-            color=(255, 100, 100),  # Red-ish for enemy projectiles
-            size=(6, 6),
+            color=projectile_color,
+            size=projectile_size,
             shape=RenderShape.CIRCLE
         ))
         
@@ -264,6 +343,13 @@ class EnemyAISystem(System):
             return pygame.Vector2(0, 0)
             
         return player_transform.position - entity_transform.position
+    
+    def _reset_enemy_color(self, entity, enemy_type):
+        """Reset enemy color to default"""
+        from src.components.renderer import Renderer
+        renderer = entity.get_component(Renderer)
+        if renderer:
+            renderer.color = enemy_type.get_color()
         
     def add_entity(self, entity):
         """Add entity if it has required AI components"""

@@ -12,6 +12,7 @@ class AIState(Enum):
     PATROL = "patrol"
     CHASE = "chase"
     ATTACK = "attack"
+    CHARGING = "charging"
     RETREAT = "retreat"
     STUNNED = "stunned"
 
