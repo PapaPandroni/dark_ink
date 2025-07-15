@@ -25,14 +25,14 @@ The game uses an Entity Component System (ECS) architecture for modularity and e
 - ✅ Basic physics with gravity and collision
 - ✅ 8-directional dash with invincibility frames
 
-### Phase 2: Combat & Death System ✅ **95% COMPLETE**
+### Phase 2: Combat & Death System ✅ **100% COMPLETE**
 - ✅ Enemy types: Rusher (red), Shooter (blue), Heavy (green)
 - ✅ Advanced projectile system with damage and knockback
 - ✅ Sophisticated AI with charge mechanics for Heavy enemies
 - ✅ Player-enemy collision with pushback system
 - ✅ Balanced combat timing (0.3s cooldowns for all entities)
-- ⏳ Ink currency drops from enemies
-- ⏳ Death penalty system with ink recovery mechanic
+- ✅ Ink currency drops from enemies
+- ✅ Death penalty system with ink recovery mechanic
 
 ### Phase 3: Level & Save System
 - Interconnected scrolling levels

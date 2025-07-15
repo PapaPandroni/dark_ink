@@ -55,6 +55,7 @@ COLORS = {
     'enemy_heavy': (50, 255, 50),
     'projectile': (255, 255, 200),
     'ink_drop': (100, 50, 200),
+    'bloodstain': (150, 0, 0),        # Dark red for player death ink
     'save_point': (255, 255, 0),
     'ui_text': (255, 255, 255),
     'ui_bar': (100, 100, 100),

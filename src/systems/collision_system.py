@@ -269,10 +269,17 @@ class CollisionSystem(System):
                 ink_value = ink_drop.collect()
                 ink_currency.add_ink(ink_value)
                 
+                # Check if this is a bloodstain and clear scene reference
+                if ink_drop.is_player_death_drop and self.scene:
+                    if self.scene.current_bloodstain == ink_drop_entity:
+                        self.scene.current_bloodstain = None
+                        print(f"[DEATH] Player recovered bloodstain! Total ink: {ink_currency.current_ink}")
+                
                 # Mark ink drop for removal
                 ink_drop_entity.active = False
                 
-                print(f"[INK] Player collected {ink_value} ink! Total: {ink_currency.current_ink}")
+                if not ink_drop.is_player_death_drop:
+                    print(f"[INK] Player collected {ink_value} ink! Total: {ink_currency.current_ink}")
             else:
                 print(f"[DEBUG] Ink drop already collected, skipping")
     
@@ -368,11 +375,17 @@ class CollisionSystem(System):
             
             # Check if target died
             if target_health.dead:
-                # Create ink drop if enemy died
-                self._create_ink_drop_from_enemy(target)
+                # Check if target is player (has InkCurrency) or enemy
+                from src.components.ink_currency import InkCurrency
+                is_player = target.has_component(InkCurrency)
                 
-                # Deactivate dead enemy so it gets removed
-                target.active = False
+                if is_player:
+                    # Player death - don't deactivate, let InkSystem handle respawn
+                    print(f"[COLLISION] Player killed by projectile - death will be handled by InkSystem")
+                else:
+                    # Enemy death - create ink drop and deactivate
+                    self._create_ink_drop_from_enemy(target)
+                    target.active = False
             
             # Add knockback effect
             if damage_dealt:

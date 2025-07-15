@@ -31,6 +31,7 @@ class GameScene:
         self.entities: List[Entity] = []
         self.systems: List[System] = []
         self.next_entity_id = 1
+        self.current_bloodstain = None  # Track player death bloodstain
         
         # Initialize systems
         self._setup_systems()
