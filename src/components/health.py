@@ -37,3 +37,15 @@ class Health(Component):
     def get_health_percent(self):
         """Get health as percentage"""
         return self.current_health / self.max_health if self.max_health > 0 else 0
+    
+    def update(self, dt):
+        """Update invincibility timer"""
+        if self.invincibility_timer > 0:
+            self.invincibility_timer -= dt
+            if self.invincibility_timer <= 0:
+                self.invincible = False
+    
+    def set_invincible(self, duration):
+        """Set invincibility for a duration"""
+        self.invincible = True
+        self.invincibility_timer = duration

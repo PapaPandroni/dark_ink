@@ -6,6 +6,7 @@ import math
 from src.systems.system import System
 from src.components.transform import Transform
 from src.components.renderer import Renderer, RenderShape
+from src.components.health import Health
 
 
 class RenderSystem(System):
@@ -48,12 +49,20 @@ class RenderSystem(System):
         for entity in sorted_entities:
             transform = entity.get_component(Transform)
             renderer = entity.get_component(Renderer)
+            health = entity.get_component(Health)
             
             if not transform or not renderer or not renderer.visible:
                 continue
                 
             # Convert world position to screen position
             screen_pos = self._world_to_screen(transform.position)
+            
+            # Apply visual effects for special states
+            original_alpha = renderer.alpha
+            if health and health.invincible and hasattr(entity, 'dashing') and entity.dashing:
+                # Flash effect during dash invincibility
+                flash_speed = 8.0  # Flashes per second
+                renderer.alpha = int(128 + 127 * math.sin(pygame.time.get_ticks() * flash_speed * 0.01))
             
             # Render based on shape type
             if renderer.shape == RenderShape.RECTANGLE:
@@ -62,6 +71,9 @@ class RenderSystem(System):
                 self._render_circle(screen_pos, renderer)
             elif renderer.shape == RenderShape.TRIANGLE:
                 self._render_triangle(screen_pos, renderer)
+            
+            # Restore original alpha
+            renderer.alpha = original_alpha
     
     def _world_to_screen(self, world_pos):
         """Convert world position to screen position"""

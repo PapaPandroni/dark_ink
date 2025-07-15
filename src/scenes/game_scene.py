@@ -155,11 +155,15 @@ class GameScene:
     
     def update(self, dt: float):
         """Update scene"""
-        # Update stamina for all entities
+        # Update stamina and health for all entities
         for entity in self.entities:
             stamina = entity.get_component(Stamina)
             if stamina:
                 stamina.update(dt)
+            
+            health = entity.get_component(Health)
+            if health:
+                health.update(dt)
         
         # Update all systems
         for system in self.systems:

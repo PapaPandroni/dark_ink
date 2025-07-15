@@ -6,6 +6,7 @@ from src.systems.system import System
 from src.components.transform import Transform
 from src.components.physics import Physics
 from src.components.stamina import Stamina
+from src.components.health import Health
 from src.core.settings import PLAYER_SPEED, PLAYER_JUMP_POWER, PLAYER_DASH_SPEED, PLAYER_DASH_DURATION
 
 
@@ -66,9 +67,13 @@ class MovementSystem(System):
                         if stamina:
                             stamina.consume_stamina('dash')
             
-            # Update dash cooldown
+            # Update dash cooldown and state
             if hasattr(entity, 'dash_cooldown') and entity.dash_cooldown > 0:
                 entity.dash_cooldown -= dt
+                
+                # End dash when cooldown expires
+                if entity.dash_cooldown <= 0 and hasattr(entity, 'dashing'):
+                    entity.dashing = False
             
             # Reset ground state (will be set by collision system)
             if physics.velocity.y > 0:  # Falling
@@ -78,6 +83,7 @@ class MovementSystem(System):
         """Perform dash ability"""
         transform = entity.get_component(Transform)
         physics = entity.get_component(Physics)
+        health = entity.get_component(Health)
         
         if not transform or not physics:
             return
@@ -93,9 +99,12 @@ class MovementSystem(System):
         # Set dash cooldown
         entity.dash_cooldown = PLAYER_DASH_DURATION
         
-        # Add invincibility frames (will be handled by health system later)
-        # For now, just set a flag
+        # Set dashing state and invincibility frames
         entity.dashing = True
+        
+        # Grant invincibility during dash
+        if health:
+            health.set_invincible(PLAYER_DASH_DURATION)
     
     def add_entity(self, entity):
         """Add entity if it has required components"""
