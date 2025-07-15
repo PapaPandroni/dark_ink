@@ -11,9 +11,10 @@ from src.components.physics import Physics
 class CollisionSystem(System):
     """System for handling collision detection and response"""
     
-    def __init__(self):
+    def __init__(self, scene=None):
         super().__init__()
         self.collision_pairs = []
+        self.scene = scene
         
     def update(self, dt: float):
         """Update collision detection and response"""
@@ -69,16 +70,24 @@ class CollisionSystem(System):
             # Check entity types using components
             from src.components.enemy_type import EnemyType
             from src.components.stamina import Stamina
+            from src.components.ink_drop import InkDropComponent
             
             is_player1 = entity1.get_component(Stamina) is not None
             is_player2 = entity2.get_component(Stamina) is not None
             is_enemy1 = entity1.get_component(EnemyType) is not None
             is_enemy2 = entity2.get_component(EnemyType) is not None
+            is_ink_drop1 = entity1.get_component(InkDropComponent) is not None
+            is_ink_drop2 = entity2.get_component(InkDropComponent) is not None
             
+            # Player-ink drop collision (collection, no physics response)
+            if (is_player1 and is_ink_drop2) or (is_player2 and is_ink_drop1):
+                self._handle_ink_collection(entity1, entity2)
+                # No physics response for ink collection
+                return
             # Player-enemy collision (pushback, no landing)
-            if (is_player1 and is_enemy2) or (is_player2 and is_enemy1):
+            elif (is_player1 and is_enemy2) or (is_player2 and is_enemy1):
                 self._handle_player_enemy_collision(entity1, entity2)
-            # All other solid collisions (player-terrain, enemy-terrain, terrain-terrain)
+            # All other solid collisions (player-terrain, enemy-terrain, ink-terrain)
             else:
                 self._resolve_solid_collision(entity1, entity2)
         
@@ -226,8 +235,99 @@ class CollisionSystem(System):
     
     def _handle_trigger_collision(self, entity1, entity2):
         """Handle trigger collision (no physical response)"""
-        # Trigger collisions just notify, don't affect physics
-        pass
+        # Check for ink drop collection
+        self._handle_ink_collection(entity1, entity2)
+    
+    def _handle_ink_collection(self, entity1, entity2):
+        """Handle ink drop collection by player"""
+        from src.components.ink_currency import InkCurrency
+        from src.components.ink_drop import InkDropComponent
+        
+        
+        # Determine which entity is the player and which is the ink drop
+        player_entity = None
+        ink_drop_entity = None
+        
+        # Check if entity1 is player (has InkCurrency) and entity2 is ink drop
+        if (entity1.has_component(InkCurrency) and 
+            entity2.has_component(InkDropComponent)):
+            player_entity = entity1
+            ink_drop_entity = entity2
+        # Check if entity2 is player and entity1 is ink drop
+        elif (entity2.has_component(InkCurrency) and 
+              entity1.has_component(InkDropComponent)):
+            player_entity = entity2
+            ink_drop_entity = entity1
+        
+        # If we found a player-ink drop collision
+        if player_entity and ink_drop_entity:
+            ink_currency = player_entity.get_component(InkCurrency)
+            ink_drop = ink_drop_entity.get_component(InkDropComponent)
+            
+            # Only collect if not already collected
+            if not ink_drop.collected:
+                ink_value = ink_drop.collect()
+                ink_currency.add_ink(ink_value)
+                
+                # Mark ink drop for removal
+                ink_drop_entity.active = False
+                
+                print(f"[INK] Player collected {ink_value} ink! Total: {ink_currency.current_ink}")
+            else:
+                print(f"[DEBUG] Ink drop already collected, skipping")
+    
+    def _create_ink_drop_from_enemy(self, enemy_entity):
+        """Create ink drop when enemy dies"""
+        from src.components.enemy_type import EnemyType
+        from src.components.ink_drop import InkDropComponent
+        from src.components.renderer import Renderer, RenderShape
+        from src.core.settings import COLORS
+        
+        # Only create ink drops for enemies (have EnemyType component)
+        enemy_type = enemy_entity.get_component(EnemyType)
+        if not enemy_type or not self.scene:
+            return
+        
+        # Get enemy position
+        enemy_transform = enemy_entity.get_component(Transform)
+        if not enemy_transform:
+            return
+        
+        # Create ink drop entity
+        ink_drop = self.scene.create_entity()
+        
+        # Add transform at enemy position
+        ink_drop.add_component(Transform(enemy_transform.position.x, enemy_transform.position.y))
+        
+        # Add physics for bouncing effect
+        ink_drop.add_component(Physics(mass=0.5, friction=0.7, gravity_scale=0.5))
+        
+        # Add solid collision so it doesn't fall through ground
+        ink_drop.add_component(Collision(
+            width=12, height=12, 
+            collision_type=CollisionType.SOLID
+        ))
+        
+        # Add purple renderer
+        ink_drop.add_component(Renderer(
+            color=COLORS['ink_drop'],
+            size=(12, 12),
+            shape=RenderShape.CIRCLE
+        ))
+        
+        # Add ink drop component with enemy's ink value
+        ink_drop.add_component(InkDropComponent(
+            ink_value=enemy_type.ink_value,
+            lifetime=30.0  # 30 seconds before despawn
+        ))
+        
+        # Add to appropriate systems
+        self.scene.physics_system.add_entity(ink_drop)
+        self.scene.collision_system.add_entity(ink_drop)
+        self.scene.render_system.add_entity(ink_drop)
+        self.scene.ink_system.add_entity(ink_drop)
+        
+        print(f"[INK] Created ink drop worth {enemy_type.ink_value} ink at position ({enemy_transform.position.x:.1f}, {enemy_transform.position.y:.1f})")
     
     def _handle_damage_collision(self, entity1, entity2):
         """Handle damage collision"""
@@ -268,6 +368,9 @@ class CollisionSystem(System):
             
             # Check if target died
             if target_health.dead:
+                # Create ink drop if enemy died
+                self._create_ink_drop_from_enemy(target)
+                
                 # Deactivate dead enemy so it gets removed
                 target.active = False
             

@@ -54,6 +54,9 @@ class UISystem(System):
         self._render_health_bar(player_entity)
         self._render_stamina_bar(player_entity)
         
+        # Render ink display
+        self._render_ink_display(player_entity)
+        
         # Render debug info
         self._render_debug_info(player_entity)
     
@@ -132,6 +135,24 @@ class UISystem(System):
             text = f"Stamina: {int(stamina.current_stamina)}/{int(stamina.max_stamina)}"
             text_surface = self.font.render(text, True, COLORS['ui_text'])
             self.screen.blit(text_surface, (bar_x, bar_y - 20))
+    
+    def _render_ink_display(self, entity):
+        """Render ink currency display"""
+        from src.components.ink_currency import InkCurrency
+        
+        ink_currency = entity.get_component(InkCurrency)
+        if not ink_currency:
+            return
+        
+        # Ink display position and size
+        display_x = 20
+        display_y = 100
+        
+        # Text
+        if self.font:
+            text = f"Ink: {int(ink_currency.current_ink)}"
+            text_surface = self.font.render(text, True, COLORS['ink_drop'])
+            self.screen.blit(text_surface, (display_x, display_y))
     
     def _render_debug_info(self, entity):
         """Render debug information"""

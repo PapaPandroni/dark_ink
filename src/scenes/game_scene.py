@@ -48,12 +48,16 @@ class GameScene:
         """Initialize game systems"""
         # Create systems
         self.physics_system = PhysicsSystem()
-        self.collision_system = CollisionSystem()
+        self.collision_system = CollisionSystem(self)
         self.render_system = RenderSystem()
         self.movement_system = MovementSystem(self.game.input_manager)
         self.shooting_system = ShootingSystem(self.game.input_manager, self)
         self.enemy_ai_system = EnemyAISystem(self)
         self.ui_system = UISystem()
+        
+        # Import and create ink system
+        from src.systems.ink_system import InkSystem
+        self.ink_system = InkSystem(self)
         
         # Connect physics system to collision system for ground detection
         self.physics_system.set_collision_system(self.collision_system)
@@ -65,6 +69,7 @@ class GameScene:
             self.shooting_system,   # Handle shooting
             self.physics_system,    # Apply physics movement
             self.collision_system,  # Check collisions after movement
+            self.ink_system,        # Manage ink drops and death
             self.render_system,     # Render everything
             self.ui_system         # UI on top
         ]
@@ -88,9 +93,16 @@ class GameScene:
         player.add_component(Health(max_health=100))
         player.add_component(Stamina())
         
+        # Add ink currency component
+        from src.components.ink_currency import InkCurrency
+        player.add_component(InkCurrency(starting_ink=0))
+        
         # Add player to systems
         for system in self.systems:
             system.add_entity(player)
+            
+        # Explicitly add player to ink system (since it might not be in systems list yet)
+        self.ink_system.add_entity(player)
         
         # Store player reference
         self.player = player
@@ -150,15 +162,15 @@ class GameScene:
     
     def _create_enemies(self):
         """Create various enemy types for testing"""
-        # Create enemies higher up so we can see them fall
+        # Create enemies at platform level for better gameplay
         # Create a Rusher enemy
-        self._create_enemy(EnemyTypeEnum.RUSHER, 800, 400)
+        self._create_enemy(EnemyTypeEnum.RUSHER, 800, 600)
         
-        # Create a Shooter enemy
-        self._create_enemy(EnemyTypeEnum.SHOOTER, 1000, 300)
+        # Create a Shooter enemy (on platform)
+        self._create_enemy(EnemyTypeEnum.SHOOTER, 1000, 600)
         
         # Create a Heavy enemy  
-        self._create_enemy(EnemyTypeEnum.HEAVY, 500, 200)
+        self._create_enemy(EnemyTypeEnum.HEAVY, 500, 600)
         
     def _create_enemy(self, enemy_type_enum, x, y):
         """Create an enemy of the specified type"""
