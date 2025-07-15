@@ -127,10 +127,13 @@ class ShootingSystem(System):
         self.scene.remove_entity(projectile)
     
     def add_entity(self, entity):
-        """Add entity that can shoot"""
-        super().add_entity(entity)
-        # Mark entity as able to shoot
-        entity.can_shoot = True
+        """Add entity that can shoot (player only)"""
+        # Only add player entities to shooting system
+        # (enemies use AI system for shooting)
+        if entity.has_component(Stamina):  # Only players have stamina
+            super().add_entity(entity)
+            # Mark entity as able to shoot
+            entity.can_shoot = True
     
     def handle_projectile_collision(self, projectile, target):
         """Handle projectile hitting a target"""

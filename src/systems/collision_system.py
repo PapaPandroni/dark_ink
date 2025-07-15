@@ -159,8 +159,64 @@ class CollisionSystem(System):
     
     def _handle_damage_collision(self, entity1, entity2):
         """Handle damage collision"""
-        # Damage collision logic will be added when Health system is implemented
-        pass
+        # Determine which entity is the projectile and which is the target
+        projectile_entity = None
+        target_entity = None
+        
+        # Check if either entity is a projectile
+        if hasattr(entity1, 'projectile_data'):
+            projectile_entity = entity1
+            target_entity = entity2
+        elif hasattr(entity2, 'projectile_data'):
+            projectile_entity = entity2
+            target_entity = entity1
+        
+        # If we have a projectile collision, handle it through the shooting system
+        if projectile_entity and target_entity:
+            # Get the shooting system from the scene to handle projectile collision
+            # We'll need to find a way to access the shooting system
+            from src.scenes.game_scene import GameScene
+            # For now, let's handle damage directly here
+            self._handle_projectile_damage(projectile_entity, target_entity)
+    
+    def _handle_projectile_damage(self, projectile, target):
+        """Handle projectile hitting a target"""
+        if not hasattr(projectile, 'projectile_data'):
+            return
+            
+        # Don't hit the owner
+        if projectile.projectile_data.owner == target:
+            return
+            
+        # Deal damage to target
+        from src.components.health import Health
+        target_health = target.get_component(Health)
+        if target_health:
+            damage_dealt = target_health.take_damage(projectile.projectile_data.damage)
+            
+            # Check if target died
+            if target_health.dead:
+                # Deactivate dead enemy so it gets removed
+                target.active = False
+            
+            # Add knockback effect
+            if damage_dealt:
+                target_physics = target.get_component(Physics)
+                if target_physics:
+                    # Calculate knockback direction from projectile to target
+                    projectile_transform = projectile.get_component(Transform)
+                    target_transform = target.get_component(Transform)
+                    
+                    if projectile_transform and target_transform:
+                        knockback_direction = target_transform.position - projectile_transform.position
+                        if knockback_direction.length() > 0:
+                            knockback_direction.normalize_ip()
+                            # Apply knockback force
+                            from src.core.settings import KNOCKBACK_FORCE
+                            target_physics.add_impulse(knockback_direction * KNOCKBACK_FORCE)
+        
+        # Deactivate projectile so it gets removed
+        projectile.active = False
     
     def add_entity(self, entity):
         """Add entity if it has required components"""

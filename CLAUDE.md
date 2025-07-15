@@ -19,11 +19,11 @@ The game uses an Entity Component System (ECS) architecture for modularity and e
 
 ## Development Phases
 
-### Phase 1: Core Mechanics Foundation ✅ (Structure Complete)
-- Player movement with twin-stick controls
-- Stamina system for shooting, jumping, and dashing
-- Basic physics with gravity and collision
-- 8-directional dash with invincibility frames
+### Phase 1: Core Mechanics Foundation ✅ **COMPLETE**
+- ✅ Player movement with twin-stick controls
+- ✅ Stamina system for shooting, jumping, and dashing  
+- ✅ Basic physics with gravity and collision
+- ✅ 8-directional dash with invincibility frames
 
 ### Phase 2: Combat & Death System
 - Enemy types: Rusher (red), Shooter (blue), Heavy (green)
@@ -133,6 +133,16 @@ python -m pdb main.py
 - ✅ Projectile system with straight-line flight and auto-despawn
 - ✅ Realistic jump physics with momentum preservation
 - ✅ Limited air control for minor trajectory adjustments
+- ✅ 8-directional dash with 0.2s invincibility frames and visual feedback
+
+**Phase 2 Combat Features**:
+- ✅ Three enemy types with distinct AI behaviors
+- ✅ Projectile damage system with knockback effects
+- ✅ Enemy health system with proper death handling
+- ✅ AI state machine (idle, patrol, chase, attack)
+- ✅ Enemy-specific stats (health, speed, damage, detection range)
+- ✅ Ranged enemy projectiles (blue shooter enemies)
+- ✅ Proper collision separation between player and enemy systems
 
 **Physics & Controls Refined**:
 - Ground-based horizontal control with full responsiveness
@@ -146,12 +156,20 @@ python -m pdb main.py
 - Debug UI showing position, velocity, and ground state
 - Proper projectile lifetime management (2 second auto-despawn)
 
-**Next Steps (Phase 2)**:
-1. Create enemy entities (Rusher, Shooter, Heavy)
-2. Implement enemy AI systems
-3. Add damage system and health interactions
-4. Create ink currency drop system
-5. Implement death and respawn mechanics
+**Enemy Details**:
+- **Red Rusher**: 30 HP, 200 speed, 15 damage, 250 detection range, aggressive melee
+- **Blue Shooter**: 40 HP, 120 speed, 25 damage, 300 detection range, ranged attacks
+- **Green Heavy**: 80 HP, 80 speed, 35 damage, 150 detection range, slow tank
+
+**Phase 2 Progress (Combat & Death System)**:
+- ✅ Complete damage system integration
+- ✅ Create enemy AI components  
+- ✅ Build enemy AI system
+- ✅ Create enemy entities (Rusher, Shooter, Heavy)
+- ✅ Enemy AI behaviors and combat mechanics
+- ✅ Enemy death and cleanup system
+- ⏳ Implement ink currency drop system
+- ⏳ Add death and respawn mechanics
 
 ## Extension Points
 

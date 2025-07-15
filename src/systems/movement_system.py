@@ -107,9 +107,12 @@ class MovementSystem(System):
             health.set_invincible(PLAYER_DASH_DURATION)
     
     def add_entity(self, entity):
-        """Add entity if it has required components"""
+        """Add entity if it has required components and is the player"""
+        # Only add player entities to movement system
+        # (enemies have their own AI system for movement)
         if (entity.has_component(Transform) and 
-            entity.has_component(Physics)):
+            entity.has_component(Physics) and
+            entity.has_component(Stamina)):  # Only players have stamina
             super().add_entity(entity)
             
             # Initialize dash properties

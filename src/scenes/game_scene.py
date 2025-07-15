@@ -9,6 +9,7 @@ from src.systems.collision_system import CollisionSystem
 from src.systems.render_system import RenderSystem
 from src.systems.movement_system import MovementSystem
 from src.systems.shooting_system import ShootingSystem
+from src.systems.enemy_ai_system import EnemyAISystem
 from src.ui.ui_system import UISystem
 from src.components.transform import Transform
 from src.components.physics import Physics
@@ -16,6 +17,8 @@ from src.components.collision import Collision, CollisionType
 from src.components.renderer import Renderer, RenderShape
 from src.components.health import Health
 from src.components.stamina import Stamina
+from src.components.ai_component import AIComponent
+from src.components.enemy_type import EnemyType, EnemyTypeEnum
 from src.core.settings import COLORS
 from typing import List
 
@@ -37,6 +40,9 @@ class GameScene:
         
         # Create test ground platform
         self._create_ground()
+        
+        # Create enemies for testing
+        self._create_enemies()
     
     def _setup_systems(self):
         """Initialize game systems"""
@@ -46,11 +52,13 @@ class GameScene:
         self.render_system = RenderSystem()
         self.movement_system = MovementSystem(self.game.input_manager)
         self.shooting_system = ShootingSystem(self.game.input_manager, self)
+        self.enemy_ai_system = EnemyAISystem(self)
         self.ui_system = UISystem()
         
         # Add systems to list - order matters for collision detection
         self.systems = [
             self.movement_system,   # Handle input first
+            self.enemy_ai_system,   # AI decisions and movement
             self.shooting_system,   # Handle shooting
             self.physics_system,    # Apply physics movement
             self.collision_system,  # Check collisions after movement
@@ -83,6 +91,9 @@ class GameScene:
         
         # Store player reference
         self.player = player
+        
+        # Set player reference for AI system
+        self.enemy_ai_system.set_player(player)
     
     def _create_ground(self):
         """Create ground platform for testing collision"""
@@ -134,10 +145,62 @@ class GameScene:
             self.collision_system.add_entity(wall)
             self.render_system.add_entity(wall)
     
-    def _create_test_entity(self):
-        """Create a test entity for development"""
-        # This will be used later for testing
-        pass
+    def _create_enemies(self):
+        """Create various enemy types for testing"""
+        # Create a Rusher enemy
+        self._create_enemy(EnemyTypeEnum.RUSHER, 800, 600)
+        
+        # Create a Shooter enemy
+        self._create_enemy(EnemyTypeEnum.SHOOTER, 1000, 600)
+        
+        # Create a Heavy enemy  
+        self._create_enemy(EnemyTypeEnum.HEAVY, 500, 600)
+        
+    def _create_enemy(self, enemy_type_enum, x, y):
+        """Create an enemy of the specified type"""
+        enemy = self.create_entity()
+        
+        # Create enemy type component first to get stats
+        enemy_type = EnemyType(enemy_type_enum)
+        enemy.add_component(enemy_type)
+        
+        # Add core components
+        enemy.add_component(Transform(x, y))
+        enemy.add_component(Physics(mass=1.0, friction=0.85))
+        
+        # Use enemy type for size and collision
+        size = enemy_type.get_size()
+        enemy.add_component(Collision(
+            width=size[0], height=size[1], 
+            collision_type=CollisionType.SOLID
+        ))
+        
+        # Use enemy type for appearance
+        enemy.add_component(Renderer(
+            color=enemy_type.get_color(),
+            size=size, 
+            shape=RenderShape.RECTANGLE
+        ))
+        
+        # Set health based on enemy type
+        enemy.add_component(Health(max_health=enemy_type.max_health))
+        
+        # Add AI component with enemy-specific settings
+        ai = AIComponent(
+            detection_range=enemy_type.detection_range,
+            attack_range=enemy_type.attack_range,
+            patrol_range=enemy_type.get_patrol_range()
+        )
+        enemy.add_component(ai)
+        
+        # Add to specific systems (not player-only systems)
+        self.physics_system.add_entity(enemy)
+        self.collision_system.add_entity(enemy)
+        self.render_system.add_entity(enemy)
+        self.enemy_ai_system.add_entity(enemy)
+        # Don't add to movement_system or shooting_system (player-only)
+                
+        return enemy
     
     def create_entity(self) -> Entity:
         """Create a new entity"""
