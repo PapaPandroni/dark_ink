@@ -144,14 +144,15 @@ class UISystem(System):
         if not ink_currency:
             return
         
-        # Ink display position and size
-        display_x = 20
-        display_y = 100
-        
         # Text
         if self.font:
             text = f"Ink: {int(ink_currency.current_ink)}"
             text_surface = self.font.render(text, True, COLORS['ink_drop'])
+            
+            # Position in top right corner
+            display_x = self.screen.get_width() - text_surface.get_width() - 20
+            display_y = 20
+            
             self.screen.blit(text_surface, (display_x, display_y))
     
     def _render_debug_info(self, entity):
